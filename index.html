@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b6e78">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="دفتر الرموز">
+<title>دفتر الرموز</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b6e78'/%3E%3Cpath d='M14 14h14v14H14zM36 14h14v14H36zM14 36h14v14H14z' fill='none' stroke='%23fff' stroke-width='4'/%3E%3Cpath d='M38 38h6v6h-6zM48 46h4v4h-4zM38 48h4v2h-4z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Reem+Kufi:wght@600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+:root {
+  --bg: #eef2f4; --surface: #ffffff; --ink: #12202a; --muted: #5b6b76; --line: #d5dde2;
+  --accent: #0b6e78; --accent-ink: #ffffff; --soft: #e1eef0; --danger: #b3261e;
+  --font-display: "Reem Kufi", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1820; --surface: #16232d; --ink: #e6eef2; --muted: #93a5b0; --line: #263642;
+    --accent: #5cc7d1; --accent-ink: #08232a; --soft: #17333a; --danger: #ff8a80;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body.locked { overflow: hidden; }
+button, input, textarea { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.wrap { max-width: 560px; margin-inline: auto; padding-bottom: 120px; }
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding-block: 18px 14px; }
+.top h1 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 30px; line-height: 1.15; }
+.count { margin: 2px 0 0; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.top .btns { display: flex; gap: 8px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 8px 16px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-weight: 500; line-height: 1.2;
+  text-decoration: none; color: var(--ink);
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { color: var(--danger); }
+.btn.small { min-height: 36px; padding: 4px 12px; font-size: 14px; }
+.btn[disabled] { opacity: .55; cursor: default; }
+
+.searchbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 6px 12px; }
+.search { position: relative; }
+.search input {
+  width: 100%; min-height: 50px; padding: 10px 46px 10px 14px;
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px;
+}
+.search input::placeholder { color: var(--muted); }
+.search input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--soft); }
+.search svg { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--muted); pointer-events: none; }
+
+.notice { margin: 0 0 12px; padding: 10px 14px; background: var(--soft); border-radius: 10px; font-size: 14px; }
+.list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.row {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center;
+  width: 100%; padding: 12px; text-align: start; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 12px; cursor: pointer;
+}
+.row:hover { border-color: var(--accent); }
+.glyph { width: 44px; height: 44px; display: grid; place-items: center; background: var(--soft); color: var(--accent); border-radius: 8px; }
+.glyph svg { width: 26px; height: 26px; }
+.rname { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.rcontent { margin: 0; font-family: var(--font-mono); font-size: 13px; color: var(--muted); direction: ltr; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rmeta { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.empty { padding: 36px 8px; text-align: center; color: var(--muted); }
+.empty h2 { margin: 0 0 6px; color: var(--ink); font-family: var(--font-display); font-size: 22px; }
+.empty p { margin: 0 auto; max-width: 34ch; }
+
+.fab {
+  position: fixed; z-index: 6; left: max(16px, env(safe-area-inset-left, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  min-height: 54px; padding: 10px 24px; border-radius: 27px; box-shadow: 0 6px 18px rgba(8, 24, 32, .28);
+}
+
+.scrim { position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-end; justify-content: center; background: rgba(8, 16, 22, .55); }
+.sheet {
+  width: 100%; max-width: 560px; max-height: 92vh; max-height: 92dvh; overflow-y: auto;
+  background: var(--surface); border-radius: 18px 18px 0 0; border: 1px solid var(--line); border-bottom: 0;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px;
+}
+.shead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.shead h2 { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+label { display: grid; gap: 6px; font-weight: 500; font-size: 14px; }
+.field { width: 100%; padding: 10px 12px; background: var(--bg); border: 1.5px solid var(--line); border-radius: 10px; }
+.field:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--soft); }
+.field.ltr { direction: ltr; text-align: left; font-family: var(--font-mono); font-size: 14px; }
+textarea.field { min-height: 96px; resize: vertical; direction: ltr; text-align: left; unicode-bidi: plaintext; font-family: var(--font-mono); font-size: 14px; }
+.field[readonly] { opacity: .85; }
+.help { margin: 0; font-size: 13px; color: var(--muted); }
+.status { margin: 0; min-height: 1.4em; font-size: 14px; }
+.status.err { color: var(--danger); }
+.status.ok { color: var(--accent); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions .grow { flex: 1 1 140px; }
+input[type="file"] { display: none; }
+ol.steps { margin: 0; padding-inline-start: 22px; display: grid; gap: 8px; }
+
+.scanbox { position: relative; border-radius: 12px; overflow: hidden; background: #000; aspect-ratio: 4 / 3; }
+.scanbox video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scanbox::after { content: ""; position: absolute; inset: 18%; border: 3px solid rgba(255,255,255,.85); border-radius: 14px; pointer-events: none; }
+
+.qrbox { justify-self: center; width: min(280px, 100%); aspect-ratio: 1; background: #fff; border-radius: 10px; padding: 4px; border: 1px solid var(--line); }
+.qrbox svg { display: block; width: 100%; height: 100%; }
+.content {
+  margin: 0; padding: 10px 12px; background: var(--bg); border-radius: 10px;
+  font-family: var(--font-mono); font-size: 14px; direction: ltr; text-align: left; unicode-bidi: plaintext;
+  overflow-wrap: anywhere; white-space: pre-wrap; max-height: 160px; overflow-y: auto; user-select: text;
+}
+.meta { margin: 0; font-size: 13px; color: var(--muted); }
+
+.setup { max-width: 560px; margin-inline: auto; padding-block: 28px 40px; display: grid; gap: 16px; }
+.setup h1 { margin: 0; font-family: var(--font-display); font-size: 32px; }
+.setup p { margin: 0; }
+
+.toast {
+  position: fixed; z-index: 30; left: 50%; transform: translateX(-50%);
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 32px);
+  padding: 10px 16px; border-radius: 10px; background: var(--ink); color: var(--bg); font-size: 14px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sheet { animation: rise .18s ease-out; }
+  @keyframes rise { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+}
+</style>
+</head>
+<body>
+
+<!-- First-run setup -->
+<section class="setup" id="setup" hidden>
+  <h1>إعداد دفتر الرموز</h1>
+  <p>هذه الخطوة لصاحب الدفتر فقط وتتم مرة واحدة. بعدها ترسل رابط المشاركة لمن تريد.</p>
+  <label for="s-url">رابط المشروع (Project URL)
+    <input class="field ltr" id="s-url" type="url" inputmode="url" autocomplete="off" placeholder="https://xxxx.supabase.co">
+  </label>
+  <label for="s-key">المفتاح العام (anon أو publishable key)
+    <input class="field ltr" id="s-key" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="eyJ... أو sb_publishable_...">
+  </label>
+  <label for="s-space">رمز الدفتر السري
+    <input class="field ltr" id="s-space" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+  </label>
+  <p class="help">رمز الدفتر يفصل دفترك عن غيره. كل من يملك الرابط الذي فيه هذا الرمز يستطيع القراءة والإضافة والحذف.</p>
+  <p class="status" id="s-status" aria-live="polite"></p>
+  <button class="btn primary" type="button" id="s-go">حفظ وبدء</button>
+</section>
+
+<!-- Main -->
+<div class="wrap" id="main" hidden>
+  <header class="top">
+    <div>
+      <h1>دفتر الرموز</h1>
+      <p class="count" id="count" aria-live="polite">جارٍ التحميل…</p>
+    </div>
+    <div class="btns">
+      <button class="btn small" id="btn-refresh" type="button" aria-label="تحديث">تحديث</button>
+      <button class="btn small" id="btn-share" type="button">مشاركة</button>
+    </div>
+  </header>
+  <div class="searchbar">
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" autocomplete="off" placeholder="ابحث بالاسم أو بمحتوى الرمز" aria-label="بحث في الرموز">
+    </div>
+  </div>
+  <p class="notice" id="note" hidden></p>
+  <ul class="list" id="list"></ul>
+  <div class="empty" id="empty" hidden></div>
+</div>
+
+<button class="btn primary fab" id="btn-add" type="button" hidden>+ إضافة رمز</button>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<!-- Add sheet -->
+<div class="scrim" id="sh-add" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="add-h">
+    <div class="shead"><h2 id="add-h">إضافة رمز</h2><button class="btn small" type="button" data-close>إغلاق</button></div>
+    <div class="scanbox" id="scanbox" hidden><video id="video" playsinline muted></video></div>
+    <div class="actions">
+      <button class="btn grow" type="button" id="btn-cam">مسح بالكاميرا</button>
+      <button class="btn grow" type="button" id="btn-pick">اختيار صورة</button>
+    </div>
+    <input id="f-pick" type="file" accept="image/*">
+    <p class="status" id="scan-status" aria-live="polite"></p>
+    <label for="a-name">الاسم
+      <input class="field" id="a-name" type="text" maxlength="80" autocomplete="off" placeholder="مثال: واي فاي المكتب">
+    </label>
+    <label for="a-content">محتوى الرمز
+      <textarea class="field" id="a-content" maxlength="2000" placeholder="يظهر هنا بعد قراءة الرمز، أو الصقه يدويا"></textarea>
+    </label>
+    <label for="a-by">اسمك (اختياري)
+      <input class="field" id="a-by" type="text" maxlength="40" autocomplete="off" placeholder="ليعرف الآخرون من أضاف الرمز">
+    </label>
+    <p class="status" id="add-status" aria-live="polite"></p>
+    <button class="btn primary" type="button" id="btn-save">حفظ في الدفتر</button>
+  </div>
+</div>
+
+<!-- Detail sheet -->
+<div class="scrim" id="sh-detail" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="d-title">
+    <div class="shead"><h2 id="d-title"></h2><button class="btn small" type="button" data-close>إغلاق</button></div>
+    <div class="qrbox" id="d-qr" hidden></div>
+    <p class="notice" id="d-noqr" hidden>تعذر رسم الرمز، لكن المحتوى محفوظ أدناه.</p>
+    <pre class="content" id="d-content"></pre>
+    <div class="actions">
+      <button class="btn grow" type="button" id="d-copy">نسخ المحتوى</button>
+      <a class="btn grow" id="d-open" href="#" target="_blank" rel="noopener noreferrer" hidden>فتح الرابط</a>
+    </div>
+    <label for="d-name">الاسم
+      <input class="field" id="d-name" type="text" maxlength="80" autocomplete="off">
+    </label>
+    <div class="actions">
+      <button class="btn primary grow" type="button" id="d-save" hidden>حفظ الاسم</button>
+      <button class="btn danger grow" type="button" id="d-del">حذف الرمز</button>
+    </div>
+    <p class="status" id="d-status" aria-live="polite"></p>
+    <p class="meta" id="d-meta"></p>
+  </div>
+</div>
+
+<!-- Share sheet -->
+<div class="scrim" id="sh-share" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-h">
+    <div class="shead"><h2 id="sh-h">مشاركة الدفتر</h2><button class="btn small" type="button" data-close>إغلاق</button></div>
+    <p>أرسل هذا الرابط لمن تريد. يفتحه بدون أي حساب ويرى كل الرموز ويضيف ويحذف.</p>
+    <label for="sh-link">رابط المشاركة
+      <input class="field ltr" id="sh-link" type="text" readonly>
+    </label>
+    <button class="btn primary" type="button" id="sh-copy">نسخ الرابط</button>
+    <p class="help">لتثبيته كتطبيق: افتح الرابط في المتصفح ثم اختر «إضافة إلى الشاشة الرئيسية». افعل ذلك من هذا الرابط نفسه حتى تُحفظ الإعدادات.</p>
+    <p class="help">الرابط يحمل مفتاح الدفتر. لا ترسله إلا لمن تثق به.</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var CFG_KEY = 'qrbook-cfg', BY_KEY = 'qrbook-by', CACHE_KEY = 'qrbook-cache';
+  var cfg = null, codes = [], loaded = false, query = '', cur = null, dupWarned = null;
+  var delTimer = null, toastTimer = null, pollTimer = null, lastJson = '';
+  var stream = null, scanning = false, lastScan = 0;
+
+  var QR_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v1M14 20h1M18 18h3v3h-3z"/></svg>';
+
+  if (typeof qrcode === 'function') {
+    qrcode.stringToBytes = function (s) { return Array.prototype.slice.call(new TextEncoder().encode(s)); };
+  }
+
+  /* ---------- storage helpers ---------- */
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function b64enc(o) {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function b64dec(s) {
+    s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '=';
+    return JSON.parse(decodeURIComponent(escape(atob(s))));
+  }
+  function validCfg(c) { return c && typeof c.u === 'string' && /^https:\/\//i.test(c.u) && typeof c.k === 'string' && c.k.length > 10 && typeof c.s === 'string' && c.s.length >= 8; }
+  function loadCfg() {
+    var h = location.hash || '';
+    if (h.indexOf('#c=') === 0) {
+      try { var c = b64dec(h.slice(3)); if (validCfg(c)) { lsSet(CFG_KEY, JSON.stringify(c)); return c; } } catch (e) {}
+    }
+    try { var s = JSON.parse(lsGet(CFG_KEY) || 'null'); if (validCfg(s)) return s; } catch (e) {}
+    return null;
+  }
+  function shareLink() { return location.href.split('#')[0] + '#c=' + b64enc(cfg); }
+
+  /* ---------- helpers ---------- */
+  function norm(s) {
+    return String(s || '').toLowerCase()
+      .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+      .replace(/[ً-ٰٟـ]/g, '')
+      .replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه');
+  }
+  function plural(n) {
+    if (n === 0) return 'لا توجد رموز';
+    if (n === 1) return 'رمز واحد';
+    if (n === 2) return 'رمزان';
+    return n + (n <= 10 ? ' رموز' : ' رمزا');
+  }
+  function fmtDate(t) {
+    try { return new Date(t).toLocaleDateString('ar-MA-u-nu-latn', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; }
+  }
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 2600);
+  }
+  function setStatus(id, msg, kind) { var el = $(id); el.textContent = msg || ''; el.className = 'status' + (kind ? ' ' + kind : ''); }
+  function randomSpace() {
+    var al = 'abcdefghjkmnpqrstuvwxyz23456789', a = new Uint8Array(16), out = '';
+    (window.crypto || window.msCrypto).getRandomValues(a);
+    for (var i = 0; i < a.length; i++) out += al[a[i] % al.length];
+    return out;
+  }
+
+  /* ---------- API (Supabase RPC) ---------- */
+  async function rpc(fn, args) {
+    var h = { 'Content-Type': 'application/json', apikey: cfg.k };
+    if (/^eyJ/.test(cfg.k)) h.Authorization = 'Bearer ' + cfg.k;
+    var r = await fetch(cfg.u.replace(/\/+$/, '') + '/rest/v1/rpc/' + fn, { method: 'POST', headers: h, body: JSON.stringify(args) });
+    if (!r.ok) { var e = new Error('http ' + r.status); e.status = r.status; throw e; }
+    var t = await r.text(); return t ? JSON.parse(t) : null;
+  }
+
+  /* ---------- sheets ---------- */
+  function openSheet(id) { $(id).hidden = false; document.body.classList.add('locked'); }
+  function closeSheets() {
+    stopScan();
+    ['sh-add', 'sh-detail', 'sh-share'].forEach(function (s) { $(s).hidden = true; });
+    document.body.classList.remove('locked'); cur = null;
+  }
+  document.querySelectorAll('.scrim').forEach(function (sc) { sc.addEventListener('click', function (e) { if (e.target === sc) closeSheets(); }); });
+  document.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', closeSheets); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheets(); });
+
+  /* ---------- list ---------- */
+  function render() {
+    var q = norm(query.trim());
+    var list = codes.filter(function (c) { return !q || norm(c.name).indexOf(q) > -1 || norm(c.content).indexOf(q) > -1; });
+    $('count').textContent = !loaded ? 'جارٍ التحميل…' : (q ? list.length + ' من ' + codes.length : plural(codes.length));
+    var ul = $('list'); ul.textContent = '';
+    list.forEach(function (c) {
+      var li = document.createElement('li');
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'row';
+      var g = document.createElement('span'); g.className = 'glyph'; g.innerHTML = QR_ICON;
+      var box = document.createElement('span'); box.style.minWidth = '0';
+      var n = document.createElement('p'); n.className = 'rname'; n.textContent = c.name;
+      var ct = document.createElement('p'); ct.className = 'rcontent'; ct.textContent = c.content;
+      var m = document.createElement('p'); m.className = 'rmeta';
+      m.textContent = (c.added_by ? 'أضافه ' + c.added_by + ' · ' : '') + fmtDate(c.created_at);
+      box.append(n, ct, m); b.append(g, box);
+      b.addEventListener('click', function () { openDetail(c.id); });
+      li.appendChild(b); ul.appendChild(li);
+    });
+    var em = $('empty');
+    if (!loaded) { em.hidden = true; return; }
+    if (!codes.length) {
+      em.hidden = false;
+      em.innerHTML = '<h2>الدفتر فارغ</h2><p>أضف أول رمز QR: امسحه بالكاميرا أو الصق محتواه، وسمّه. سيظهر عند كل من تشاركه معه.</p>';
+    } else if (!list.length) {
+      em.hidden = false; em.innerHTML = '<h2>لا نتائج</h2><p></p>';
+      em.querySelector('p').textContent = 'لا يوجد رمز يطابق «' + query.trim() + '».';
+    } else { em.hidden = true; }
+  }
+  $('q').addEventListener('input', function (e) { query = e.target.value; render(); });
+
+  async function refresh(manual) {
+    if (!cfg) return;
+    try {
+      var data = await rpc('list_codes', { p_space: cfg.s });
+      data = Array.isArray(data) ? data : [];
+      var j = JSON.stringify(data);
+      $('note').hidden = true;
+      if (j !== lastJson || !loaded) {
+        lastJson = j; codes = data; loaded = true; lsSet(CACHE_KEY, j);
+        if (cur && !codes.some(function (c) { return c.id === cur; })) closeSheets();
+        render();
+      }
+      if (manual) toast('تم التحديث');
+    } catch (e) {
+      loaded = true; render();
+      $('note').hidden = false;
+      $('note').textContent = (e && e.status === 404)
+        ? 'لم أجد دوال قاعدة البيانات. تأكد من تشغيل ملف SQL في Supabase.'
+        : 'تعذر الاتصال بالدفتر. تحقق من الإنترنت أو من رابط المشروع والمفتاح.';
+    }
+  }
+  $('btn-refresh').addEventListener('click', function () { refresh(true); });
+
+  /* ---------- QR drawing ---------- */
+  function qrSvg(text) {
+    if (typeof qrcode !== 'function') return null;
+    try {
+      var q = qrcode(0, 'M'); q.addData(text, 'Byte'); q.make();
+      var n = q.getModuleCount(), m = 4, d = '';
+      for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) d += 'M' + (c + m) + ' ' + (r + m) + 'h1v1h-1z';
+      var s = n + 2 * m;
+      return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + s + ' ' + s + '" shape-rendering="crispEdges" role="img" aria-label="رمز QR"><rect width="' + s + '" height="' + s + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+    } catch (e) { return null; }
+  }
+
+  /* ---------- detail ---------- */
+  function openDetail(id) {
+    var c = codes.find(function (x) { return x.id === id; }); if (!c) return;
+    cur = id;
+    $('d-title').textContent = c.name; $('d-name').value = c.name;
+    var svg = qrSvg(c.content), box = $('d-qr');
+    box.innerHTML = svg || ''; box.hidden = !svg; $('d-noqr').hidden = !!svg;
+    $('d-content').textContent = c.content;
+    var isUrl = /^https?:\/\//i.test(c.content), a = $('d-open');
+    a.hidden = !isUrl; a.href = isUrl ? c.content : '#';
+    $('d-save').hidden = true;
+    var del = $('d-del'); del.textContent = 'حذف الرمز'; del.dataset.armed = '';
+    clearTimeout(delTimer); setStatus('d-status', '');
+    $('d-meta').textContent = (c.added_by ? 'أضافه ' + c.added_by + ' · ' : '') + fmtDate(c.created_at);
+    openSheet('sh-detail');
+  }
+  $('d-name').addEventListener('input', function () {
+    var c = codes.find(function (x) { return x.id === cur; });
+    var v = $('d-name').value.trim();
+    $('d-save').hidden = !c || !v || v === c.name;
+  });
+  $('d-save').addEventListener('click', async function () {
+    var v = $('d-name').value.trim(); if (!v || !cur) return;
+    $('d-save').disabled = true;
+    try {
+      await rpc('rename_code', { p_space: cfg.s, p_id: cur, p_name: v });
+      $('d-title').textContent = v; $('d-save').hidden = true; setStatus('d-status', 'تم حفظ الاسم.', 'ok'); refresh();
+    } catch (e) { setStatus('d-status', 'تعذر حفظ الاسم. حاول مرة أخرى.', 'err'); }
+    $('d-save').disabled = false;
+  });
+  $('d-del').addEventListener('click', async function () {
+    var b = $('d-del');
+    if (!b.dataset.armed) {
+      b.dataset.armed = '1'; b.textContent = 'تأكيد الحذف';
+      clearTimeout(delTimer); delTimer = setTimeout(function () { b.dataset.armed = ''; b.textContent = 'حذف الرمز'; }, 4000);
+      return;
+    }
+    b.disabled = true;
+    try { await rpc('delete_code', { p_space: cfg.s, p_id: cur }); closeSheets(); toast('تم حذف الرمز'); refresh(); }
+    catch (e) { setStatus('d-status', 'تعذر الحذف. حاول مرة أخرى.', 'err'); }
+    b.disabled = false; b.dataset.armed = ''; b.textContent = 'حذف الرمز';
+  });
+  $('d-copy').addEventListener('click', async function () {
+    var text = $('d-content').textContent;
+    try { await navigator.clipboard.writeText(text); toast('تم النسخ'); }
+    catch (e) {
+      var r = document.createRange(); r.selectNodeContents($('d-content'));
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      setStatus('d-status', 'حدد النص وانسخه يدويا.', '');
+    }
+  });
+
+  /* ---------- scanning ---------- */
+  var scanCanvas = document.createElement('canvas');
+  function stopScan() {
+    scanning = false;
+    if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    var v = $('video'); if (v) { try { v.pause(); } catch (e) {} v.srcObject = null; }
+    $('scanbox').hidden = true; $('btn-cam').textContent = 'مسح بالكاميرا';
+  }
+  async function startScan() {
+    if (typeof jsQR !== 'function') { setStatus('scan-status', 'قارئ الرموز لم يُحمّل. تحقق من الإنترنت أو الصق المحتوى.', 'err'); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus('scan-status', 'الكاميرا غير متاحة في هذا المتصفح. استخدم «اختيار صورة».', 'err'); return;
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    } catch (e) {
+      setStatus('scan-status', (e && e.name === 'NotAllowedError')
+        ? 'لم يُسمح باستخدام الكاميرا. اسمح بها من إعدادات المتصفح للموقع، أو استخدم «اختيار صورة».'
+        : 'تعذر تشغيل الكاميرا. استخدم «اختيار صورة».', 'err');
+      return;
+    }
+    var v = $('video'); v.srcObject = stream; v.setAttribute('playsinline', '');
+    try { await v.play(); } catch (e) {}
+    $('scanbox').hidden = false; $('btn-cam').textContent = 'إيقاف الكاميرا';
+    setStatus('scan-status', 'وجّه الكاميرا نحو الرمز.', ''); scanning = true; requestAnimationFrame(scanLoop);
+  }
+  function scanLoop(ts) {
+    if (!scanning) return;
+    var v = $('video');
+    if (v.readyState >= 2 && v.videoWidth && ts - lastScan > 120) {
+      lastScan = ts;
+      var w = Math.min(v.videoWidth, 640), h = Math.round(v.videoHeight * (w / v.videoWidth));
+      scanCanvas.width = w; scanCanvas.height = h;
+      var ctx = scanCanvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(v, 0, 0, w, h);
+      var d = ctx.getImageData(0, 0, w, h);
+      var r = jsQR(d.data, w, h, { inversionAttempts: 'dontInvert' });
+      if (r && r.data) {
+        $('a-content').value = r.data; dupWarned = null; stopScan();
+        setStatus('scan-status', 'تمت قراءة الرمز. اكتب له اسما واحفظه.', 'ok');
+        if (navigator.vibrate) { try { navigator.vibrate(60); } catch (e) {} }
+        $('a-name').focus(); return;
+      }
+    }
+    requestAnimationFrame(scanLoop);
+  }
+  async function decodeFile(file) {
+    var url = URL.createObjectURL(file);
+    try {
+      var img = await new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = url; });
+      var factors = [1, 0.5, 0.3];
+      for (var k = 0; k < factors.length; k++) {
+        var scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)) * factors[k];
+        var w = Math.max(1, Math.round(img.naturalWidth * scale)), h = Math.max(1, Math.round(img.naturalHeight * scale));
+        var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        var ctx = cv.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0, w, h);
+        var d = ctx.getImageData(0, 0, w, h);
+        var r = jsQR(d.data, w, h, { inversionAttempts: 'attemptBoth' });
+        if (r && r.data) return r.data;
+      }
+      return null;
+    } finally { URL.revokeObjectURL(url); }
+  }
+  $('btn-cam').addEventListener('click', function () { if (scanning) { stopScan(); setStatus('scan-status', ''); } else startScan(); });
+  $('btn-pick').addEventListener('click', function () { $('f-pick').click(); });
+  $('f-pick').addEventListener('change', async function (e) {
+    var f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+    if (typeof jsQR !== 'function') { setStatus('scan-status', 'قارئ الرموز لم يُحمّل. الصق المحتوى يدويا.', 'err'); return; }
+    stopScan(); setStatus('scan-status', 'جارٍ قراءة الصورة…', '');
+    try {
+      var text = await decodeFile(f);
+      if (text) { $('a-content').value = text; dupWarned = null; setStatus('scan-status', 'تمت قراءة الرمز. اكتب له اسما واحفظه.', 'ok'); $('a-name').focus(); }
+      else setStatus('scan-status', 'لم أجد رمزا في الصورة. جرّب صورة أوضح أو الصق المحتوى.', 'err');
+    } catch (err) { setStatus('scan-status', 'تعذر فتح الصورة.', 'err'); }
+  });
+
+  /* ---------- add ---------- */
+  function openAdd() {
+    $('a-name').value = ''; $('a-content').value = ''; dupWarned = null;
+    $('a-by').value = lsGet(BY_KEY) || '';
+    setStatus('scan-status', ''); setStatus('add-status', '');
+    $('btn-save').textContent = 'حفظ في الدفتر'; $('scanbox').hidden = true;
+    openSheet('sh-add');
+  }
+  $('btn-add').addEventListener('click', openAdd);
+  $('a-content').addEventListener('input', function () { dupWarned = null; $('btn-save').textContent = 'حفظ في الدفتر'; });
+  $('btn-save').addEventListener('click', async function () {
+    var name = $('a-name').value.trim(), content = $('a-content').value.trim(), by = $('a-by').value.trim();
+    if (!name) { setStatus('add-status', 'اكتب اسما للرمز.', 'err'); $('a-name').focus(); return; }
+    if (!content) { setStatus('add-status', 'أضف محتوى الرمز بمسحه أو بلصقه.', 'err'); return; }
+    var dup = codes.find(function (c) { return c.content === content; });
+    if (dup && dupWarned !== content) {
+      dupWarned = content;
+      setStatus('add-status', 'هذا الرمز محفوظ مسبقا باسم «' + dup.name + '». اضغط مرة أخرى للحفظ باسم جديد.', 'err');
+      $('btn-save').textContent = 'حفظ على أي حال'; return;
+    }
+    var b = $('btn-save'); b.disabled = true; setStatus('add-status', 'جارٍ الحفظ…', '');
+    try {
+      lsSet(BY_KEY, by);
+      await rpc('add_code', { p_space: cfg.s, p_name: name, p_content: content, p_by: by || null });
+      closeSheets(); toast('تمت الإضافة إلى الدفتر'); refresh();
+    } catch (e) { setStatus('add-status', 'تعذر الحفظ. تحقق من الاتصال وحاول مرة أخرى.', 'err'); }
+    b.disabled = false;
+  });
+
+  /* ---------- share ---------- */
+  $('btn-share').addEventListener('click', function () {
+    $('sh-link').value = shareLink(); openSheet('sh-share');
+  });
+  $('sh-copy').addEventListener('click', async function () {
+    var inp = $('sh-link');
+    try { await navigator.clipboard.writeText(inp.value); toast('تم نسخ الرابط'); }
+    catch (e) { inp.focus(); inp.select(); toast('حدد الرابط وانسخه يدويا'); }
+  });
+  $('sh-link').addEventListener('focus', function (e) { e.target.select(); });
+
+  /* ---------- setup ---------- */
+  $('s-go').addEventListener('click', async function () {
+    var u = $('s-url').value.trim().replace(/\/+$/, ''), k = $('s-key').value.trim(), s = $('s-space').value.trim();
+    if (!/^https:\/\//i.test(u)) { setStatus('s-status', 'رابط المشروع يجب أن يبدأ بـ https://', 'err'); return; }
+    if (k.length < 20) { setStatus('s-status', 'الصق المفتاح العام كاملا.', 'err'); return; }
+    if (!/^[A-Za-z0-9_-]{8,}$/.test(s)) { setStatus('s-status', 'رمز الدفتر: 8 أحرف أو أكثر، إنجليزية وأرقام فقط.', 'err'); return; }
+    cfg = { u: u, k: k, s: s };
+    var b = $('s-go'); b.disabled = true; setStatus('s-status', 'جارٍ التحقق…', '');
+    try {
+      await rpc('list_codes', { p_space: cfg.s });
+      lsSet(CFG_KEY, JSON.stringify(cfg));
+      location.hash = '#c=' + b64enc(cfg);
+      enterMain();
+    } catch (e) {
+      cfg = null;
+      setStatus('s-status', (e && e.status === 404)
+        ? 'الاتصال سليم لكن الدوال غير موجودة. شغّل ملف SQL في Supabase ثم أعد المحاولة.'
+        : 'فشل الاتصال. تأكد من الرابط والمفتاح.', 'err');
+    }
+    b.disabled = false;
+  });
+
+  function enterMain() {
+    $('setup').hidden = true; $('main').hidden = false; $('btn-add').hidden = false;
+    try { var cached = JSON.parse(lsGet(CACHE_KEY) || 'null'); if (Array.isArray(cached)) { codes = cached; loaded = true; lastJson = JSON.stringify(cached); } } catch (e) {}
+    render(); refresh();
+    clearInterval(pollTimer);
+    pollTimer = setInterval(function () { if (!document.hidden && $('sh-add').hidden) refresh(); }, 15000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+  }
+
+  cfg = loadCfg();
+  if (cfg) enterMain();
+  else { $('setup').hidden = false; $('s-space').value = randomSpace(); }
+})();
+</script>
+</body>
+</html>
