@@ -118,6 +118,9 @@ ol.steps { margin: 0; padding-inline-start: 22px; display: grid; gap: 8px; }
 .scanbox video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .scanbox::after { content: ""; position: absolute; inset: 18%; border: 3px solid rgba(255,255,255,.85); border-radius: 14px; pointer-events: none; }
 
+.scanctl { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.scanctl label { flex: 1 1 160px; }
+input[type="range"] { width: 100%; }
 .qrbox { justify-self: center; width: min(280px, 100%); aspect-ratio: 1; background: #fff; border-radius: 10px; padding: 4px; border: 1px solid var(--line); }
 .qrbox svg { display: block; width: 100%; height: 100%; }
 .content {
@@ -193,11 +196,20 @@ ol.steps { margin: 0; padding-inline-start: 22px; display: grid; gap: 8px; }
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="add-h">
     <div class="shead"><h2 id="add-h">إضافة رمز</h2><button class="btn small" type="button" data-close>إغلاق</button></div>
     <div class="scanbox" id="scanbox" hidden><video id="video" playsinline muted></video></div>
+    <div class="scanctl" id="scanctl" hidden>
+      <label for="zoom" id="zoom-wrap" hidden>تكبير
+        <input id="zoom" type="range" min="1" max="4" step="0.1" value="1">
+      </label>
+      <button class="btn small" type="button" id="btn-torch" hidden>الفلاش</button>
+    </div>
     <div class="actions">
-      <button class="btn grow" type="button" id="btn-cam">مسح بالكاميرا</button>
+      <button class="btn grow" type="button" id="btn-cam">مسح مباشر</button>
+      <button class="btn grow" type="button" id="btn-shot">تصوير بكاميرا الهاتف</button>
       <button class="btn grow" type="button" id="btn-pick">اختيار صورة</button>
     </div>
     <input id="f-pick" type="file" accept="image/*">
+    <input id="f-shot" type="file" accept="image/*" capture="environment">
+    <p class="help">للمسح المباشر: ثبّت الهاتف وقرّب الرمز حتى يملأ الإطار وتجنب الظل والانعكاس. إن بقيت الصورة ضعيفة فاستخدم «تصوير بكاميرا الهاتف» لأنها أوضح.</p>
     <p class="status" id="scan-status" aria-live="polite"></p>
     <label for="a-name">الاسم
       <input class="field" id="a-name" type="text" maxlength="80" autocomplete="off" placeholder="مثال: واي فاي المكتب">
@@ -12857,57 +12869,102 @@ var qrcode = function() {
 
   /* ---------- scanning ---------- */
   var scanCanvas = document.createElement('canvas');
+  var track = null, detector = null, busy = false, torchOn = false;
+
   function stopScan() {
-    scanning = false;
+    scanning = false; torchOn = false; busy = false;
     if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    track = null;
     var v = $('video'); if (v) { try { v.pause(); } catch (e) {} v.srcObject = null; }
-    $('scanbox').hidden = true; $('btn-cam').textContent = 'مسح بالكاميرا';
+    $('scanbox').hidden = true; $('scanctl').hidden = true;
+    $('btn-torch').textContent = 'الفلاش'; $('btn-cam').textContent = 'مسح مباشر';
+  }
+  function gotCode(text) {
+    $('a-content').value = text; dupWarned = null;
+    setStatus('scan-status', 'تمت قراءة الرمز. اكتب له اسما واحفظه.', 'ok');
+    if (navigator.vibrate) { try { navigator.vibrate(60); } catch (e) {} }
+    $('a-name').focus();
   }
   async function startScan() {
-    if (typeof jsQR !== 'function') { setStatus('scan-status', 'قارئ الرموز لم يُحمّل. تحقق من الإنترنت أو الصق المحتوى.', 'err'); return; }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setStatus('scan-status', 'الكاميرا غير متاحة في هذا المتصفح. استخدم «اختيار صورة».', 'err'); return;
+      setStatus('scan-status', 'الكاميرا غير متاحة في هذا المتصفح. استخدم «تصوير بكاميرا الهاتف».', 'err'); return;
+    }
+    if (!('BarcodeDetector' in window) && typeof jsQR !== 'function') {
+      setStatus('scan-status', 'قارئ الرموز غير متاح. الصق المحتوى يدويا.', 'err'); return;
     }
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false
+      });
     } catch (e) {
       setStatus('scan-status', (e && e.name === 'NotAllowedError')
-        ? 'لم يُسمح باستخدام الكاميرا. اسمح بها من إعدادات المتصفح للموقع، أو استخدم «اختيار صورة».'
-        : 'تعذر تشغيل الكاميرا. استخدم «اختيار صورة».', 'err');
+        ? 'لم يُسمح باستخدام الكاميرا. اسمح بها من إعدادات المتصفح للموقع، أو استخدم «تصوير بكاميرا الهاتف».'
+        : 'تعذر تشغيل الكاميرا. استخدم «تصوير بكاميرا الهاتف».', 'err');
       return;
+    }
+    track = stream.getVideoTracks()[0];
+    var caps = {};
+    try { caps = track.getCapabilities ? track.getCapabilities() : {}; } catch (e) { caps = {}; }
+    try {
+      if (caps.focusMode && caps.focusMode.indexOf('continuous') > -1) await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+    } catch (e) {}
+    var zw = $('zoom-wrap'), tb = $('btn-torch');
+    if (caps.zoom && caps.zoom.max > caps.zoom.min) {
+      var z = $('zoom'); z.min = caps.zoom.min; z.max = caps.zoom.max; z.step = caps.zoom.step || 0.1; z.value = caps.zoom.min; zw.hidden = false;
+    } else { zw.hidden = true; }
+    tb.hidden = !caps.torch;
+    $('scanctl').hidden = zw.hidden && tb.hidden;
+    if (!detector && 'BarcodeDetector' in window) {
+      try { detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { detector = null; }
     }
     var v = $('video'); v.srcObject = stream; v.setAttribute('playsinline', '');
     try { await v.play(); } catch (e) {}
     $('scanbox').hidden = false; $('btn-cam').textContent = 'إيقاف الكاميرا';
-    setStatus('scan-status', 'وجّه الكاميرا نحو الرمز.', ''); scanning = true; requestAnimationFrame(scanLoop);
+    setStatus('scan-status', 'وجّه الكاميرا نحو الرمز وقرّبها حتى يملأ الإطار.', '');
+    scanning = true; requestAnimationFrame(scanLoop);
   }
-  function scanLoop(ts) {
+  async function scanLoop(ts) {
     if (!scanning) return;
     var v = $('video');
-    if (v.readyState >= 2 && v.videoWidth && ts - lastScan > 120) {
-      lastScan = ts;
-      var w = Math.min(v.videoWidth, 640), h = Math.round(v.videoHeight * (w / v.videoWidth));
-      scanCanvas.width = w; scanCanvas.height = h;
-      var ctx = scanCanvas.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(v, 0, 0, w, h);
-      var d = ctx.getImageData(0, 0, w, h);
-      var r = jsQR(d.data, w, h, { inversionAttempts: 'dontInvert' });
-      if (r && r.data) {
-        $('a-content').value = r.data; dupWarned = null; stopScan();
-        setStatus('scan-status', 'تمت قراءة الرمز. اكتب له اسما واحفظه.', 'ok');
-        if (navigator.vibrate) { try { navigator.vibrate(60); } catch (e) {} }
-        $('a-name').focus(); return;
-      }
+    if (!busy && v.readyState >= 2 && v.videoWidth && ts - lastScan > 150) {
+      lastScan = ts; busy = true;
+      try {
+        var text = null;
+        if (detector) {
+          try { var found = await detector.detect(v); if (found && found.length) text = found[0].rawValue; }
+          catch (e) { detector = null; }
+        }
+        if (!text && typeof jsQR === 'function' && scanning) {
+          var w = Math.min(v.videoWidth, 1280), h = Math.round(v.videoHeight * (w / v.videoWidth));
+          scanCanvas.width = w; scanCanvas.height = h;
+          var ctx = scanCanvas.getContext('2d', { willReadFrequently: true });
+          ctx.drawImage(v, 0, 0, w, h);
+          var d = ctx.getImageData(0, 0, w, h);
+          var r = jsQR(d.data, w, h, { inversionAttempts: 'dontInvert' });
+          if (r && r.data) text = r.data;
+        }
+        if (text && scanning) { stopScan(); gotCode(text); return; }
+      } catch (e) {}
+      busy = false;
     }
-    requestAnimationFrame(scanLoop);
+    if (scanning) requestAnimationFrame(scanLoop);
   }
   async function decodeFile(file) {
     var url = URL.createObjectURL(file);
     try {
       var img = await new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = url; });
-      var factors = [1, 0.5, 0.3];
-      for (var k = 0; k < factors.length; k++) {
-        var scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)) * factors[k];
+      if ('BarcodeDetector' in window) {
+        try {
+          var det = new BarcodeDetector({ formats: ['qr_code'] });
+          var found = await det.detect(img);
+          if (found && found.length) return found[0].rawValue;
+        } catch (e) {}
+      }
+      if (typeof jsQR !== 'function') return null;
+      var longSide = Math.max(img.naturalWidth, img.naturalHeight);
+      var targets = [2000, 1400, 1000, 700, 500];
+      for (var k = 0; k < targets.length; k++) {
+        var scale = Math.min(1, targets[k] / longSide);
         var w = Math.max(1, Math.round(img.naturalWidth * scale)), h = Math.max(1, Math.round(img.naturalHeight * scale));
         var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
         var ctx = cv.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0, w, h);
@@ -12918,17 +12975,27 @@ var qrcode = function() {
       return null;
     } finally { URL.revokeObjectURL(url); }
   }
-  $('btn-cam').addEventListener('click', function () { if (scanning) { stopScan(); setStatus('scan-status', ''); } else startScan(); });
-  $('btn-pick').addEventListener('click', function () { $('f-pick').click(); });
-  $('f-pick').addEventListener('change', async function (e) {
+  async function onPhoto(e) {
     var f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
-    if (typeof jsQR !== 'function') { setStatus('scan-status', 'قارئ الرموز لم يُحمّل. الصق المحتوى يدويا.', 'err'); return; }
     stopScan(); setStatus('scan-status', 'جارٍ قراءة الصورة…', '');
     try {
       var text = await decodeFile(f);
-      if (text) { $('a-content').value = text; dupWarned = null; setStatus('scan-status', 'تمت قراءة الرمز. اكتب له اسما واحفظه.', 'ok'); $('a-name').focus(); }
-      else setStatus('scan-status', 'لم أجد رمزا في الصورة. جرّب صورة أوضح أو الصق المحتوى.', 'err');
+      if (text) gotCode(text);
+      else setStatus('scan-status', 'لم أجد رمزا في الصورة. صوّر من مسافة أقرب وبإضاءة جيدة وثبّت الهاتف، ثم حاول مرة أخرى.', 'err');
     } catch (err) { setStatus('scan-status', 'تعذر فتح الصورة.', 'err'); }
+  }
+  $('btn-cam').addEventListener('click', function () { if (scanning) { stopScan(); setStatus('scan-status', ''); } else startScan(); });
+  $('btn-shot').addEventListener('click', function () { $('f-shot').click(); });
+  $('btn-pick').addEventListener('click', function () { $('f-pick').click(); });
+  $('f-shot').addEventListener('change', onPhoto);
+  $('f-pick').addEventListener('change', onPhoto);
+  $('zoom').addEventListener('input', function (e) {
+    if (track) { try { track.applyConstraints({ advanced: [{ zoom: parseFloat(e.target.value) }] }); } catch (err) {} }
+  });
+  $('btn-torch').addEventListener('click', function () {
+    if (!track) return; torchOn = !torchOn;
+    try { track.applyConstraints({ advanced: [{ torch: torchOn }] }); } catch (e) {}
+    $('btn-torch').textContent = torchOn ? 'إطفاء الفلاش' : 'الفلاش';
   });
 
   /* ---------- add ---------- */
